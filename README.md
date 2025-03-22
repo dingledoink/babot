@@ -1,6 +1,6 @@
 # BenchApp Bot (Full Puppeteer Version)
 
-✅ Uses full puppeteer (no chrome-aws-lambda)
+✅ Uses full puppeteer! (no chrome-aws-lambda)
 ✅ Ideal for Railway
 ✅ Easiest to deploy, Chromium just works
 
