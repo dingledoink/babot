@@ -1,14 +1,14 @@
-# BenchApp Bot (Lightweight Version)
+# BenchApp Bot (Lightweight, Version-Locked)
 
-This version uses `puppeteer-core` + `chrome-aws-lambda` to work better on low-resource platforms like Render's free tier.
+Uses `puppeteer-core@10.4.0` and `chrome-aws-lambda@10.1.0` for Render compatibility.
 
 ## Render Setup
 
 1. Upload to GitHub
-2. Create a new Render Web Service:
+2. In Render:
    - Build Command: `npm install`
    - Start Command: `node index.js`
-3. Set environment variables:
+3. Add env vars:
    - BENCHAPP_EMAIL
    - BENCHAPP_PASS
-4. Deploy and test endpoint `/scrape`
+4. Deploy and test `/scrape`
