@@ -5,12 +5,20 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.get('/scrape', async (req, res) => {
-  const browser = await puppeteer.launch({ headless: 'new' });
+  console.log("Starting Puppeteer scrape...");
+
+  const browser = await puppeteer.launch({
+    headless: true,
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
+
   const page = await browser.newPage();
 
   try {
+    console.log("Navigating to login page...");
     await page.goto('https://www.benchapp.com/login', { waitUntil: 'networkidle0' });
 
+    console.log("Typing credentials...");
     await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
     await page.type('input[name="password"]', process.env.BENCHAPP_PASS);
     await Promise.all([
@@ -18,8 +26,10 @@ app.get('/scrape', async (req, res) => {
       page.waitForNavigation({ waitUntil: 'networkidle0' }),
     ]);
 
+    console.log("Navigating to schedule...");
     await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'networkidle0' });
 
+    console.log("Extracting game data...");
     const games = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('tr')).filter(row =>
         row.querySelector('a[href*="/schedule/game-"]')
@@ -39,9 +49,11 @@ app.get('/scrape', async (req, res) => {
       });
     });
 
+    console.log("Scrape complete. Closing browser.");
     await browser.close();
     res.json(games);
   } catch (error) {
+    console.error("Scrape failed:", error.message);
     await browser.close();
     res.status(500).json({ error: error.message });
   }
