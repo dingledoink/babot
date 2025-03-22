@@ -1,8 +1,8 @@
-# BenchApp Bot (Final Version)
+# BenchApp Bot (Strict Chromium Check)
 
-✅ Uses puppeteer-core + chrome-aws-lambda  
-✅ Fallback path for Render-compatible Chromium  
-✅ Fully Render Free Tier compatible
+✅ Uses chrome-aws-lambda
+✅ Verifies Chromium is available before launching browser
+✅ Clean error handling for environments without Chromium
 
 ## Render Setup
 

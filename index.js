@@ -5,16 +5,19 @@ const puppeteer = require('puppeteer-core');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-console.log(">>> Starting FINAL BenchApp bot...");
+console.log(">>> FINAL-STRICT BenchApp bot starting...");
 
 app.get('/scrape', async (req, res) => {
   console.log(">>> /scrape endpoint hit");
 
   let browser;
   try {
-    console.log(">>> Launching Puppeteer browser...");
-    const executablePath = await chromium.executablePath || '/usr/bin/chromium-browser';
+    const executablePath = await chromium.executablePath;
+    if (!executablePath) {
+      throw new Error("Chromium not available in this environment. Cannot proceed.");
+    }
 
+    console.log(">>> Launching Puppeteer with Render-compatible Chromium...");
     browser = await puppeteer.launch({
       args: chromium.args,
       executablePath,
@@ -23,23 +26,22 @@ app.get('/scrape', async (req, res) => {
 
     const page = await browser.newPage();
 
-    console.log(">>> Going to BenchApp login...");
+    console.log(">>> Navigating to login...");
     await page.goto('https://www.benchapp.com/login', { waitUntil: 'networkidle0' });
 
-    console.log(">>> Typing credentials...");
+    console.log(">>> Logging in...");
     await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
     await page.type('input[name="password"]', process.env.BENCHAPP_PASS);
 
-    console.log(">>> Submitting login form...");
     await Promise.all([
       page.click('button[type="submit"]'),
       page.waitForNavigation({ waitUntil: 'networkidle0' }),
     ]);
 
-    console.log(">>> Navigating to schedule list...");
+    console.log(">>> Visiting schedule page...");
     await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'networkidle0' });
 
-    console.log(">>> Scraping game data...");
+    console.log(">>> Extracting game data...");
     const games = await page.evaluate(() => {
       const rows = Array.from(document.querySelectorAll('tr')).filter(row =>
         row.querySelector('a[href*="/schedule/game-"]')
@@ -59,10 +61,8 @@ app.get('/scrape', async (req, res) => {
       });
     });
 
-    console.log(">>> Scraping complete, closing browser.");
+    console.log(">>> Done! Sending JSON.");
     await browser.close();
-
-    console.log(">>> Sending game data as response.");
     res.json(games);
   } catch (error) {
     console.error(">>> ERROR:", error.message);
