@@ -1,20 +1,22 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-console.log(">>> Starting BenchApp bot...");
+console.log(">>> Starting lightweight BenchApp bot...");
 
 app.get('/scrape', async (req, res) => {
   console.log(">>> /scrape endpoint hit");
 
   let browser;
   try {
-    console.log(">>> Launching Puppeteer browser...");
+    console.log(">>> Launching Puppeteer browser (lightweight)...");
     browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
     });
 
     const page = await browser.newPage();

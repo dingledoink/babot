@@ -1,15 +1,14 @@
-# BenchApp Bot (Verbose Logging Version)
+# BenchApp Bot (Lightweight Version)
 
-Bot to scrape BenchApp game schedule with extra logging for debugging on Render.
+This version uses `puppeteer-core` + `chrome-aws-lambda` to work better on low-resource platforms like Render's free tier.
 
 ## Render Setup
 
-1. Upload this repo to GitHub
-2. Go to Render.com and create a new Web Service
-3. Paste in your repo link and set:
+1. Upload to GitHub
+2. Create a new Render Web Service:
    - Build Command: `npm install`
    - Start Command: `node index.js`
-4. Set environment variables:
+3. Set environment variables:
    - BENCHAPP_EMAIL
    - BENCHAPP_PASS
-5. Deploy and watch the Logs tab for detailed build/runtime feedback
+4. Deploy and test endpoint `/scrape`
