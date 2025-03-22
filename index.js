@@ -1,13 +1,11 @@
 const express = require('express');
-const chromium = require('chrome-aws-lambda');
-const puppeteer = require('puppeteer-core');
+const puppeteer = require('puppeteer');
 
 const app = express();
 const PORT = parseInt(process.env.PORT || "8080", 10);
 
-console.log(">>> FINAL-STRICT BenchApp bot (Railway) starting...");
+console.log(">>> FULL Puppeteer BenchApp bot starting...");
 
-// Health check route for Railway's ping
 app.get("/", (req, res) => {
   res.send("BenchApp bot is running.");
 });
@@ -17,16 +15,10 @@ app.get("/scrape", async (req, res) => {
 
   let browser;
   try {
-    const executablePath = await chromium.executablePath;
-    if (!executablePath) {
-      throw new Error("Chromium not available in this environment. Cannot proceed.");
-    }
-
-    console.log(">>> Launching Puppeteer with Render-compatible Chromium...");
+    console.log(">>> Launching Puppeteer (full)...");
     browser = await puppeteer.launch({
-      args: chromium.args,
-      executablePath,
-      headless: chromium.headless,
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();

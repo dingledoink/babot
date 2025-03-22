@@ -1,16 +1,16 @@
-# BenchApp Bot (Railway-Ready)
+# BenchApp Bot (Full Puppeteer Version)
 
-✅ Uses chrome-aws-lambda
-✅ Binds to PORT for Railway compatibility
-✅ Includes root route for health check
+✅ Uses full puppeteer (no chrome-aws-lambda)
+✅ Ideal for Railway
+✅ Easiest to deploy, Chromium just works
 
 ## Deployment
 
 1. Upload to GitHub
-2. Deploy on Railway
-3. Set:
+2. In Railway:
    - Build Command: `npm install`
    - Start Command: `node index.js`
-4. Add Environment Variables:
+3. Add Environment Variables:
    - BENCHAPP_EMAIL
    - BENCHAPP_PASS
+4. Visit `/scrape` to test
