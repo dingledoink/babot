@@ -1,16 +1,16 @@
-# BenchApp Bot (Strict Chromium Check)
+# BenchApp Bot (Railway-Ready)
 
 ✅ Uses chrome-aws-lambda
-✅ Verifies Chromium is available before launching browser
-✅ Clean error handling for environments without Chromium
+✅ Binds to PORT for Railway compatibility
+✅ Includes root route for health check
 
-## Render Setup
+## Deployment
 
 1. Upload to GitHub
-2. In Render:
+2. Deploy on Railway
+3. Set:
    - Build Command: `npm install`
    - Start Command: `node index.js`
-3. Add env vars:
+4. Add Environment Variables:
    - BENCHAPP_EMAIL
    - BENCHAPP_PASS
-4. Deploy and test `/scrape`

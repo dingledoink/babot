@@ -1,7 +1,7 @@
 {
   "name": "benchapp-bot",
   "version": "1.0.0",
-  "description": "BenchApp bot using chrome-aws-lambda with strict executablePath check",
+  "description": "BenchApp bot for Railway deployment",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

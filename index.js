@@ -3,11 +3,16 @@ const chromium = require('chrome-aws-lambda');
 const puppeteer = require('puppeteer-core');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = parseInt(process.env.PORT || "8080", 10);
 
-console.log(">>> FINAL-STRICT BenchApp bot starting...");
+console.log(">>> FINAL-STRICT BenchApp bot (Railway) starting...");
 
-app.get('/scrape', async (req, res) => {
+// Health check route for Railway's ping
+app.get("/", (req, res) => {
+  res.send("BenchApp bot is running.");
+});
+
+app.get("/scrape", async (req, res) => {
   console.log(">>> /scrape endpoint hit");
 
   let browser;
