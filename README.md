@@ -1,6 +1,8 @@
-# BenchApp Bot (Lightweight, Version-Locked)
+# BenchApp Bot (Final Version)
 
-Uses `puppeteer-core@10.4.0` and `chrome-aws-lambda@10.1.0` for Render compatibility.
+✅ Uses puppeteer-core + chrome-aws-lambda  
+✅ Fallback path for Render-compatible Chromium  
+✅ Fully Render Free Tier compatible
 
 ## Render Setup
 

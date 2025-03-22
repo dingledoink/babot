@@ -1,7 +1,7 @@
 {
   "name": "benchapp-bot",
   "version": "1.0.0",
-  "description": "BenchApp scraper bot using lightweight puppeteer-core and chrome-aws-lambda",
+  "description": "BenchApp bot with puppeteer-core and fallback executablePath for Render",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"

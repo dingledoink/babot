@@ -5,17 +5,19 @@ const puppeteer = require('puppeteer-core');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-console.log(">>> Starting lightweight BenchApp bot...");
+console.log(">>> Starting FINAL BenchApp bot...");
 
 app.get('/scrape', async (req, res) => {
   console.log(">>> /scrape endpoint hit");
 
   let browser;
   try {
-    console.log(">>> Launching Puppeteer browser (lightweight)...");
+    console.log(">>> Launching Puppeteer browser...");
+    const executablePath = await chromium.executablePath || '/usr/bin/chromium-browser';
+
     browser = await puppeteer.launch({
       args: chromium.args,
-      executablePath: await chromium.executablePath,
+      executablePath,
       headless: chromium.headless,
     });
 
