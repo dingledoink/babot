@@ -2,8 +2,6 @@ import express from 'express';
 import puppeteer from 'puppeteer-core';
 import chrome from 'chrome-aws-lambda';
 
-const { executablePath } = chrome;
-
 const app = express();
 const PORT = process.env.PORT || 8080;
 
@@ -15,7 +13,7 @@ app.get('/scrape', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       args: chrome.args,
-      executablePath: await executablePath(),
+      executablePath: chrome.executablePath || '/usr/bin/chromium-browser',
       headless: chrome.headless,
     });
 
