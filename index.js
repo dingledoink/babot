@@ -9,7 +9,11 @@ app.get('/scrape', async (req, res) => {
   let browser = null;
 
   try {
-    const executablePath = await chrome.executablePath || '/usr/bin/chromium';
+    let executablePath = await chrome.executablePath;
+
+    if (!executablePath) {
+      executablePath = '/usr/bin/chromium-browser'; // fallback
+    }
 
     browser = await puppeteer.launch({
       args: chrome.args,
