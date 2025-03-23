@@ -1,27 +1,38 @@
-import puppeteer from 'puppeteer';
+import express from 'express';
+import pkg from 'chrome-aws-lambda';
+import puppeteer from 'puppeteer-core';
 
-const express = require('express');
+const { executablePath } = pkg;
+
 const app = express();
-const PORT = process.env.PORT || 8080;
+const port = process.env.PORT || 8080;
+
+app.get('/', (req, res) => {
+  res.send('BenchApp Bot is running!');
+});
 
 app.get('/scrape', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
+      args: pkg.args,
+      defaultViewport: pkg.defaultViewport,
+      executablePath: await executablePath(),
       headless: true,
-      args: ['--no-sandbox']
+      ignoreHTTPSErrors: true,
     });
-    const page = await browser.newPage();
-    await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'domcontentloaded' });
 
-    const html = await page.content();
+    const page = await browser.newPage();
+    await page.goto('https://www.benchapp.com/schedule/list');
+
+    const content = await page.content();
     await browser.close();
 
-    res.send(html);
+    res.send({ html: content });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).send({ error: error.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log('✅ Server running on port', PORT);
+app.listen(port, () => {
+  console.log(`Server listening on port ${port}`);
 });
