@@ -1,3 +1,3 @@
 # BenchApp Bot
 
-Deployed to Railway with Puppeteer (headless) scraping capabilities.
+Simple bot that uses Puppeteer and chrome-aws-lambda on Railway.
