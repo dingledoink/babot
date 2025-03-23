@@ -1,13 +1,15 @@
 {
   "name": "benchapp-bot",
   "version": "1.0.0",
-  "description": "BenchApp bot using full Puppeteer (no chrome-aws-lambda)",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
+    "chrome-aws-lambda": "^10.1.0",
+    "puppeteer-core": "^21.3.8",
     "express": "^4.18.2",
-    "puppeteer": "^21.3.8"
+    "dotenv": "^16.0.3"
   }
 }
