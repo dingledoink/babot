@@ -1,6 +1,8 @@
 import express from 'express';
-import { executablePath } from 'chrome-aws-lambda';
 import puppeteer from 'puppeteer-core';
+import chrome from 'chrome-aws-lambda';
+
+const { executablePath } = chrome;
 
 const app = express();
 const PORT = process.env.PORT || 8080;
