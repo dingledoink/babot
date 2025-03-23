@@ -1,9 +1,8 @@
 {
   "name": "benchapp-bot",
   "version": "1.0.0",
-  "description": "BenchApp lineup scraper bot",
-  "main": "index.js",
   "type": "module",
+  "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },

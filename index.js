@@ -1,34 +1,31 @@
-import puppeteer from 'puppeteer';
-import express from 'express';
+import express from "express";
+import puppeteer from "puppeteer";
 
 const app = express();
-const port = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8080;
 
-app.get('/', (_req, res) => {
-  res.send('BenchApp bot server running!');
+app.get("/", (req, res) => {
+  res.send("BenchApp Bot is alive.");
 });
 
-app.get('/scrape', async (_req, res) => {
+app.get("/scrape", async (req, res) => {
   let browser;
   try {
     browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
-
     const page = await browser.newPage();
-    await page.goto('https://example.com');
+    await page.goto("https://example.com");
     const content = await page.content();
-
-    res.send({ html: content });
+    await browser.close();
+    res.send({ success: true, content });
   } catch (err) {
-    console.error('SCRAPE ERROR:', err);
-    res.status(500).send({ error: err.message });
-  } finally {
     if (browser) await browser.close();
+    res.status(500).send({ error: err.message });
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
 });
