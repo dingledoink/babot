@@ -1,37 +1,32 @@
-import puppeteer from 'puppeteer-core';
-import express from 'express';
-import * as lambda from 'chrome-aws-lambda';
+import express from "express";
+import { launch } from "puppeteer-core";
+import chrome from "chrome-aws-lambda";
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.get('/scrape', async (req, res) => {
-  let browser = null;
-
+app.get("/scrape", async (req, res) => {
   try {
-    const executablePath = await lambda.executablePath || '/usr/bin/chromium';
-
-    browser = await puppeteer.launch({
-      args: lambda.args,
-      defaultViewport: lambda.defaultViewport,
+    const executablePath = await chrome.executablePath || "/usr/bin/chromium";
+    const browser = await launch({
+      args: chrome.args,
+      defaultViewport: chrome.defaultViewport,
       executablePath,
-      headless: lambda.headless,
+      headless: chrome.headless,
     });
 
     const page = await browser.newPage();
-    await page.goto('https://www.benchapp.com/login?redirect=/schedule/list');
+    await page.goto("https://www.benchapp.com/login", { waitUntil: "networkidle0" });
 
-    const content = await page.content();
-    res.send({ html: content });
-  } catch (error) {
-    res.status(500).send({ error: error.message });
-  } finally {
-    if (browser !== null) {
-      await browser.close();
-    }
+    const html = await page.content();
+    await browser.close();
+    res.json({ html });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
