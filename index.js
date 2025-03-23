@@ -1,28 +1,30 @@
-import express from "express";
-import chromium from "chrome-aws-lambda";
-import puppeteer from "puppeteer-core";
+import puppeteer from 'puppeteer-core';
+import chrome from 'chrome-aws-lambda';
+import express from 'express';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.get("/scrape", async (req, res) => {
+app.get('/scrape', async (req, res) => {
   let browser = null;
+
   try {
-    const executablePath = await chromium.executablePath;
     browser = await puppeteer.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath: executablePath,
-      headless: chromium.headless,
+      args: chrome.args,
+      executablePath: await chrome.executablePath,
+      headless: chrome.headless,
     });
 
     const page = await browser.newPage();
-    await page.goto("https://www.benchapp.com/login?redirect=/schedule/list");
+    await page.goto('https://www.benchapp.com/login?redirect=%2Fschedule%2Flist', {
+      waitUntil: 'networkidle0',
+    });
 
-    const content = await page.content();
-    res.json({ html: content });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+    const html = await page.content();
+    res.send({ html });
+  } catch (error) {
+    console.error(error);
+    res.status(500).send({ error: error.message });
   } finally {
     if (browser !== null) {
       await browser.close();
@@ -31,5 +33,5 @@ app.get("/scrape", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
