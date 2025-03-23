@@ -1,7 +1,5 @@
 import puppeteer from 'puppeteer-core';
-import * as lambda from 'chrome-aws-lambda';
 import express from 'express';
-import { execSync } from 'child_process';
 import fs from 'fs';
 
 const app = express();
@@ -13,28 +11,17 @@ app.get('/', (_req, res) => {
 
 app.get('/scrape', async (_req, res) => {
   let browser;
-
   try {
-    // Dynamically locate Chromium binary
-    let executablePath = await lambda.executablePath;
-    if (!executablePath || !fs.existsSync(executablePath)) {
-      try {
-        const path = execSync('which chromium || which chromium-browser || which google-chrome').toString().trim();
-        if (fs.existsSync(path)) {
-          executablePath = path;
-        } else {
-          throw new Error('Chromium not found');
-        }
-      } catch {
-        throw new Error('Chromium executable not found anywhere');
-      }
+    const path = '/nix/store/6rjqfr6v5g6m68ksqljnykg8x4r1kv15-chromium-122.0.6261.128/bin/chromium';
+
+    if (!fs.existsSync(path)) {
+      throw new Error(`Chromium not found at ${path}`);
     }
 
     browser = await puppeteer.launch({
-      args: lambda.args,
-      defaultViewport: lambda.defaultViewport,
       headless: true,
-      executablePath
+      executablePath: path,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
