@@ -11,9 +11,13 @@ app.get('/', (req, res) => {
 
 app.get('/scrape', async (req, res) => {
   try {
+    const execPath = typeof chrome.executablePath === 'function'
+      ? await chrome.executablePath()
+      : chrome.executablePath || '/usr/bin/chromium-browser';
+
     const browser = await puppeteer.launch({
       args: chrome.args,
-      executablePath: chrome.executablePath || '/usr/bin/chromium-browser',
+      executablePath: execPath,
       headless: chrome.headless,
     });
 
