@@ -1,16 +1,28 @@
 [build]
-  nixpkgs = [
-    "nodejs_18",
-    "chromium",
-    "libnss3",
-    "libatk1.0",
-    "libatk-bridge2",
-    "libcups",
-    "libgbm",
-    "libasound2",
-    "libpangocairo",
-    "libxss",
-    "libgtk-3",
-    "libxshmfence",
-    "libglu"
-  ]
+nixpkgs = [
+  "nodejs_18",
+  "chromium",
+  "nss",
+  "atk",
+  "atk-bridge",
+  "cups",
+  "libgbm",
+  "alsa-lib",
+  "pango",
+  "gtk3",
+  "mesa",
+  "xorg.libX11",
+  "xorg.libXcomposite",
+  "xorg.libXdamage",
+  "xorg.libXext",
+  "xorg.libXfixes",
+  "xorg.libXi",
+  "xorg.libXrandr",
+  "xorg.libXScrnSaver",
+  "xorg.libxcb",
+  "xorg.libxshmfence",
+  "glu"
+]
+
+[phases.build]
+cmds = ["npm install"]
