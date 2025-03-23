@@ -1,24 +1,8 @@
-import puppeteer from 'puppeteer-core';
+import puppeteer from 'puppeteer';
 import express from 'express';
-import fs from 'fs';
-import { execSync } from 'child_process';
 
 const app = express();
 const port = process.env.PORT || 3000;
-
-function findChromiumPath() {
-  try {
-    const chromiumPath = execSync('which chromium').toString().trim();
-    if (fs.existsSync(chromiumPath)) return chromiumPath;
-  } catch (err) {}
-
-  try {
-    const chromiumBrowserPath = execSync('which chromium-browser').toString().trim();
-    if (fs.existsSync(chromiumBrowserPath)) return chromiumBrowserPath;
-  } catch (err) {}
-
-  return null;
-}
 
 app.get('/', (_req, res) => {
   res.send('BenchApp bot server running!');
@@ -27,14 +11,8 @@ app.get('/', (_req, res) => {
 app.get('/scrape', async (_req, res) => {
   let browser;
   try {
-    const executablePath = findChromiumPath();
-    if (!executablePath) {
-      throw new Error('Chromium not found anywhere on system');
-    }
-
     browser = await puppeteer.launch({
       headless: true,
-      executablePath,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
