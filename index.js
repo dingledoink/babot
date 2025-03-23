@@ -1,14 +1,17 @@
-import express from "express";
-import { launch } from "puppeteer-core";
-import chrome from "chrome-aws-lambda";
+import puppeteer from 'puppeteer-core';
+import chrome from 'chrome-aws-lambda';
+import express from 'express';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.get("/scrape", async (req, res) => {
+app.get('/scrape', async (req, res) => {
+  let browser = null;
+
   try {
-    const executablePath = await chrome.executablePath || "/usr/bin/chromium";
-    const browser = await launch({
+    const executablePath = await chrome.executablePath || '/usr/bin/chromium';
+
+    browser = await puppeteer.launch({
       args: chrome.args,
       defaultViewport: chrome.defaultViewport,
       executablePath,
@@ -16,14 +19,14 @@ app.get("/scrape", async (req, res) => {
     });
 
     const page = await browser.newPage();
-    await page.goto("https://www.benchapp.com/login", { waitUntil: "networkidle0" });
+    await page.goto('https://www.benchapp.com/login?redirect=%2Fschedule%2Flist');
 
     const html = await page.content();
-    await browser.close();
     res.json({ html });
   } catch (err) {
-    console.error(err);
     res.status(500).json({ error: err.message });
+  } finally {
+    if (browser) await browser.close();
   }
 });
 
