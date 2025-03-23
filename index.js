@@ -1,6 +1,8 @@
 import express from 'express';
 import puppeteer from 'puppeteer-core';
-import chrome from 'chrome-aws-lambda';
+import * as chromeCJS from 'chrome-aws-lambda';
+
+const chrome = chromeCJS.default || chromeCJS;
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -11,7 +13,9 @@ app.get('/', (req, res) => {
 
 app.get('/scrape', async (req, res) => {
   try {
-    const execPath = chrome.executablePath || '/usr/bin/chromium-browser';
+    const execPath = typeof chrome.executablePath === 'function'
+      ? await chrome.executablePath()
+      : chrome.executablePath || '/usr/bin/chromium-browser';
 
     const browser = await puppeteer.launch({
       args: chrome.args,
@@ -32,6 +36,6 @@ app.get('/scrape', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`>>> FINAL-STRICT BenchApp bot (Railway) starting...`);
-  console.log(`>>> Server listening on port ${PORT}`);
+  console.log(`>>> FINAL-FINAL BenchApp bot is live.`);
+  console.log(`>>> Listening on port ${PORT}`);
 });
