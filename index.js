@@ -1,6 +1,7 @@
 import puppeteer from 'puppeteer-core';
 import * as lambda from 'chrome-aws-lambda';
 import express from 'express';
+import { execSync } from 'child_process';
 import fs from 'fs';
 
 const app = express();
@@ -14,17 +15,19 @@ app.get('/scrape', async (_req, res) => {
   let browser;
 
   try {
-    let executablePath;
-
-    // Check if lambda has an executable
-    if (await lambda.executablePath && fs.existsSync(await lambda.executablePath)) {
-      executablePath = await lambda.executablePath;
-    } else if (fs.existsSync('/usr/bin/chromium')) {
-      executablePath = '/usr/bin/chromium';
-    } else if (fs.existsSync('/usr/bin/chromium-browser')) {
-      executablePath = '/usr/bin/chromium-browser';
-    } else {
-      throw new Error('Chromium executable not found');
+    // Dynamically locate Chromium binary
+    let executablePath = await lambda.executablePath;
+    if (!executablePath || !fs.existsSync(executablePath)) {
+      try {
+        const path = execSync('which chromium || which chromium-browser || which google-chrome').toString().trim();
+        if (fs.existsSync(path)) {
+          executablePath = path;
+        } else {
+          throw new Error('Chromium not found');
+        }
+      } catch {
+        throw new Error('Chromium executable not found anywhere');
+      }
     }
 
     browser = await puppeteer.launch({
@@ -40,7 +43,7 @@ app.get('/scrape', async (_req, res) => {
 
     res.send({ html: content });
   } catch (err) {
-    console.error(err);
+    console.error('SCRAPE ERROR:', err);
     res.status(500).send({ error: err.message });
   } finally {
     if (browser) await browser.close();
