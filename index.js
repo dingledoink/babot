@@ -1,39 +1,31 @@
 import express from 'express';
-import { launch } from 'puppeteer-core';
-import { readFile } from 'fs/promises';
-import path from 'path';
-import { fileURLToPath } from 'url';
+import puppeteer from 'puppeteer';
 
 const app = express();
-const port = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8080;
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
-app.get('/', (_req, res) => {
-  res.send('✅ BenchApp Bot is up and running.');
+app.get('/', (req, res) => {
+  res.send('✅ BenchApp bot is live');
 });
 
-app.get('/scrape', async (_req, res) => {
+app.get('/scrape', async (req, res) => {
   try {
-    const chromiumPath = process.env.CHROMIUM_PATH || '/usr/bin/chromium';
-    const browser = await launch({
-      executablePath: chromiumPath,
+    const browser = await puppeteer.launch({
+      headless: true,
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: 'new'
     });
 
     const page = await browser.newPage();
-    await page.goto('https://example.com');
-    const title = await page.title();
-
+    await page.goto('https://www.benchapp.com/schedule/list');
+    const content = await page.content();
     await browser.close();
-    res.json({ title });
+
+    res.send({ html: content });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.listen(port, () => {
-  console.log(`✅ Server listening on port ${port}`);
+app.listen(PORT, () => {
+  console.log(`>>> FINAL BenchApp bot listening on port ${PORT}`);
 });
