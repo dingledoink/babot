@@ -1,45 +1,40 @@
-import express from 'express';
 import puppeteer from 'puppeteer-core';
-import chrome from 'chrome-aws-lambda';
-import path from 'path';
-import fs from 'fs';
+import * as lambda from 'chrome-aws-lambda';
+import express from 'express';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.get('/', (req, res) => {
-  res.send('BenchApp Bot is alive!');
+app.get('/', (_req, res) => {
+  res.send('BenchApp bot server running!');
 });
 
-app.get('/scrape', async (req, res) => {
+app.get('/scrape', async (_req, res) => {
+  let browser;
+
   try {
-    const executablePath = await chrome.executablePath || '/usr/bin/chromium-browser';
+    const executablePath = await lambda.executablePath ?? '/usr/bin/chromium';
 
-    // If fallback doesn't exist, throw a useful error
-    if (!fs.existsSync(executablePath)) {
-      throw new Error(`Chromium executable not found at: ${executablePath}`);
-    }
-
-    const browser = await puppeteer.launch({
-      args: chrome.args,
-      executablePath,
-      headless: chrome.headless,
-      defaultViewport: chrome.defaultViewport,
+    browser = await puppeteer.launch({
+      args: lambda.args,
+      defaultViewport: lambda.defaultViewport,
+      headless: true,
+      executablePath
     });
 
     const page = await browser.newPage();
-    await page.goto('https://example.com'); // Replace this with your real URL
+    await page.goto('https://example.com'); // change to your target
+    const content = await page.content();
 
-    const title = await page.title();
-    await browser.close();
-
-    res.json({ title });
+    res.send({ html: content });
   } catch (err) {
     console.error(err);
-    res.status(500).json({ error: err.message });
+    res.status(500).send({ error: err.message });
+  } finally {
+    if (browser) await browser.close();
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server is listening on port ${port}`);
+  console.log(`Server is running on port ${port}`);
 });
