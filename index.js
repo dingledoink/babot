@@ -1,47 +1,59 @@
-import puppeteer from 'puppeteer';
-import express from 'express';
+import puppeteer from 'puppeteer-core';
 import * as cheerio from 'cheerio';
-import dotenv from 'dotenv';
-
-dotenv.config();
+import express from 'express';
 
 const app = express();
 const port = process.env.PORT || 3000;
 
+app.use(express.json());
+
 app.get('/scrape', async (req, res) => {
+  const email = process.env.BENCHAPP_EMAIL;
+  const password = process.env.BENCHAPP_PASS;
+
+  if (!email || !password) {
+    return res.status(500).json({ error: 'Missing BENCHAPP_EMAIL or BENCHAPP_PASS' });
+  }
+
+  let browser;
   try {
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
 
-    const loginUrl = 'https://www.benchapp.com/login?redirect=/schedule/list';
-    await page.goto(loginUrl, { waitUntil: 'networkidle2' });
+    // Navigate to login page
+    await page.goto('https://www.benchapp.com/login', { waitUntil: 'networkidle2', timeout: 60000 });
 
-    await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
-    await page.type('input[name="password"]', process.env.BENCHAPP_PASS);
-    await page.click('button[type="submit"]');
+    // Type in login credentials
+    await page.type('input[name="email"]', email, { delay: 50 });
+    await page.type('input[name="password"]', password, { delay: 50 });
 
-    await page.waitForNavigation({ waitUntil: 'networkidle2' });
+    // Click login and wait for navigation
+    await Promise.all([
+      page.waitForNavigation({ waitUntil: 'networkidle0', timeout: 60000 }),
+      page.click('button[type="submit"]'),
+    ]);
 
-    const scheduleUrl = 'https://www.benchapp.com/schedule/list';
-    await page.goto(scheduleUrl, { waitUntil: 'networkidle2' });
+    // Go to the schedule list page
+    await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'networkidle2', timeout: 60000 });
 
     const content = await page.content();
     const $ = cheerio.load(content);
-    const html = $.html();
 
-    await browser.close();
+    // Return full HTML so you can refine later
+    res.json({ html: $.html() });
 
-    res.send({ html });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send({ error: error.message });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: err.message });
+  } finally {
+    if (browser) await browser.close();
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server listening on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
