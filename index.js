@@ -1,5 +1,5 @@
 import express from "express";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 import * as cheerio from "cheerio";
 import dotenv from "dotenv";
 import path from "path";
@@ -22,7 +22,6 @@ app.get("/scrape", async (req, res) => {
   try {
     browser = await puppeteer.launch({
       headless: true,
-      executablePath: "/usr/bin/google-chrome-stable", // Railway-compatible
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
