@@ -1,28 +1,30 @@
-import express from "express";
-import puppeteer from "puppeteer";
+// index.js
+import puppeteer from 'puppeteer';
+import express from 'express';
+import dotenv from 'dotenv';
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3000;
 
-app.get("/scrape", async (req, res) => {
+app.get('/scrape', async (req, res) => {
   try {
-    const browser = await puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-    });
-
+    const browser = await puppeteer.launch({ headless: 'new' });
     const page = await browser.newPage();
-    await page.goto("https://www.benchapp.com/login", { waitUntil: "networkidle2" });
+
+    await page.goto('https://www.benchapp.com/login', {
+      waitUntil: 'networkidle2',
+    });
 
     const html = await page.content();
     await browser.close();
-    res.send({ html });
+
+    res.json({ html });
   } catch (error) {
-    console.error(error);
-    res.status(500).send({ error: error.message });
+    res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(port, () => {
-  console.log(`Server is running on port ${port}`);
+  console.log(`Server running on port ${port}`);
 });
