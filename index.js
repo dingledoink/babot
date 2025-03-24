@@ -1,7 +1,9 @@
-// index.js
 import puppeteer from 'puppeteer';
+
 import express from 'express';
+import * as cheerio from 'cheerio';
 import dotenv from 'dotenv';
+
 dotenv.config();
 
 const app = express();
@@ -9,22 +11,15 @@ const port = process.env.PORT || 3000;
 
 app.get('/scrape', async (req, res) => {
   try {
-    const browser = await puppeteer.launch({ headless: 'new' });
-    const page = await browser.newPage();
-
-    await page.goto('https://www.benchapp.com/login', {
-      waitUntil: 'networkidle2',
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
-    const html = await page.content();
-    await browser.close();
+    const page = await browser.newPage();
 
-    res.json({ html });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
+    const loginUrl = 'https://www.benchapp.com/login?redirect=/schedule/list';
+    await page.goto(loginUrl, { waitUntil: 'networkidle2' });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
-});
+    await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
+    await page.type('input[name="password"]
