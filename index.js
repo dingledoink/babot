@@ -1,55 +1,56 @@
-import puppeteer from "puppeteer-core";
-import * as cheerio from "cheerio";
-import dotenv from "dotenv";
-import express from "express";
+// index.js
+import puppeteer from 'puppeteer-core';
+import express from 'express';
+import cheerio from 'cheerio';
+import dotenv from 'dotenv';
+import fetch from 'node-fetch';
+
 dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 8080;
 
-app.get("/scrape", async (req, res) => {
+app.get('/scrape', async (req, res) => {
   let browser;
   try {
     browser = await puppeteer.launch({
-      headless: "new",
-      executablePath: "/usr/bin/google-chrome",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      headless: 'new',
+      executablePath: '/usr/bin/chromium',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
-
-    await page.goto("https://www.benchapp.com/login?redirect=%2Fschedule%2Flist", {
-      waitUntil: "networkidle2",
+    await page.goto('https://www.benchapp.com/login?redirect=%2Fschedule%2Flist', {
+      waitUntil: 'networkidle2',
       timeout: 60000,
     });
 
-    console.log("Login page loaded");
-
     await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
     await page.type('input[name="password"]', process.env.BENCHAPP_PASS);
-
-    console.log("Typed email and password");
-
     await page.click('button[type="submit"]');
 
-    // Wait for schedule list links to load after login
-    await page.waitForSelector("a[href^='/schedule/game-']", { timeout: 60000 });
+    await page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 60000 });
 
-    console.log("Schedule links loaded");
+    await page.goto('https://www.benchapp.com/schedule/list', {
+      waitUntil: 'networkidle2',
+      timeout: 60000,
+    });
 
     const content = await page.content();
     const $ = cheerio.load(content);
-    const gameIds = [];
 
-    $("a[href*='/schedule/game-']").each((i, el) => {
-      const href = $(el).attr("href");
-      const match = href.match(/\/schedule\/game-(\d+)/);
-      if (match) {
-        gameIds.push(match[1]);
+    const gameIds = [];
+    $('a').each((i, el) => {
+      const href = $(el).attr('href');
+      if (href) {
+        const match = href.match(/\/schedule\/game-(\d+)/);
+        if (match) {
+          gameIds.push(match[1]);
+        }
       }
     });
 
-    res.json({ gameIds });
+    res.json({ games: [...new Set(gameIds)] });
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
@@ -59,5 +60,5 @@ app.get("/scrape", async (req, res) => {
 });
 
 app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+  console.log(`Server listening on port ${port}`);
 });
