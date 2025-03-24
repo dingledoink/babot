@@ -1,51 +1,61 @@
-// ... all your imports and existing code remain above
+import express from 'express';
+import puppeteer from 'puppeteer-core';
+import * as cheerio from 'cheerio';
 
-// Move run() into a callable function for the route
-async function scrapeBenchApp(req, res) {
+const app = express();
+const PORT = process.env.PORT || 8080;
+const BENCHAPP_EMAIL = process.env.BENCHAPP_EMAIL;
+const BENCHAPP_PASS = process.env.BENCHAPP_PASS;
+
+app.get('/scrape', async (req, res) => {
+  let browser;
+
   try {
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
       headless: true,
-      executablePath: '/usr/bin/google-chrome',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      executablePath: '/usr/bin/chromium-browser',
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
     await page.goto('https://www.benchapp.com/login', { waitUntil: 'networkidle2' });
 
-    await page.type('input[name="email"]', email);
-    await page.type('input[name="password"]', password);
+    await page.type('input[name="email"]', BENCHAPP_EMAIL);
+    await page.type('input[name="password"]', BENCHAPP_PASS);
     await Promise.all([
       page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2' }),
+      page.waitForNavigation({ waitUntil: 'networkidle2' })
     ]);
 
     await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'networkidle2' });
 
-    const content = await page.content();
-    const $ = cheerio.load(content);
+    const html = await page.content();
+    const $ = cheerio.load(html);
     const events = [];
 
     $('a[href^="/schedule/game-"]').each((i, el) => {
       const href = $(el).attr('href');
       if (href) {
-        const match = href.match(/\\/schedule\\/game-(\\d+)/);
+        const match = href.match(/\/schedule\/game-(\d+)/); // ✅ FIXED
         if (match) {
           events.push(match[1]);
         }
       }
     });
 
-    await browser.close();
-    res.json({ success: true, games: events });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ success: false, error: error.message });
+    res.json({ game_ids: events });
+  } catch (err) {
+    console.error('Scraper error:', err);
+    res.status(500).json({ error: err.message || err.toString() });
+  } finally {
+    if (browser) await browser.close();
   }
-}
+});
 
-const app = express();
+app.get('/', (req, res) => {
+  res.send('BenchApp bot is running.');
+});
 
-app.get('/', (req, res) => res.send('Bot running. Nothing to see here.'));
-app.get('/scrape', scrapeBenchApp);
-
-app.listen(process.env.PORT || 8080);
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
