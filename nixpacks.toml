@@ -1,6 +1,0 @@
-
-[phases.setup]
-aptPkgs = ["chromium-browser"]
-
-[start]
-cmd = "node index.js"
