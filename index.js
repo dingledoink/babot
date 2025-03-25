@@ -2,6 +2,7 @@ import puppeteer from 'puppeteer';
 import express from 'express';
 import dotenv from 'dotenv';
 import * as cheerio from 'cheerio';
+import fs from 'fs';
 
 dotenv.config();
 const app = express();
@@ -16,7 +17,7 @@ app.get('/games', async (req, res) => {
 
     const page = await browser.newPage();
 
-    // Log in
+    // 1. LOGIN
     await page.goto('https://www.benchapp.com/login?redirect=%2Fschedule%2Flist', {
       waitUntil: 'networkidle2'
     });
@@ -28,24 +29,31 @@ app.get('/games', async (req, res) => {
       page.waitForNavigation({ waitUntil: 'networkidle2' })
     ]);
 
-    // Go to schedule list
+    // 2. VISIT SCHEDULE
     await page.goto('https://www.benchapp.com/schedule/list', {
       waitUntil: 'networkidle2'
     });
 
     const html = await page.content();
+
+    // Save raw HTML so we can debug
+    fs.writeFileSync('/app/schedule_debug.html', html);
+
     const $ = cheerio.load(html);
     const gameData = [];
 
     const dateElements = $('div.date');
+    console.log(`Found ${dateElements.length} date elements`);
+
     dateElements.each((i, el) => {
       const dateText = $(el).text().trim();
 
-      // Look ahead in the DOM for the next <a href="/schedule/game-xxxxx">
-      const nextGameLink = $(el).nextAll().find('a[href*="/schedule/game-"]').first();
-      const href = nextGameLink.attr('href');
+      // Try to locate a nearby game link
+      const nextLink = $(el).nextAll().find('a[href*="/schedule/game-"]').first();
+      const href = nextLink.attr('href');
 
       if (href) {
+        console.log(`Found game link after ${dateText}: ${href}`);
         const match = href.match(/\/schedule\/game-(\d+)/);
         if (match) {
           gameData.push({
@@ -53,6 +61,8 @@ app.get('/games', async (req, res) => {
             gameId: match[1],
           });
         }
+      } else {
+        console.log(`⚠️ No game link found after ${dateText}`);
       }
     });
 
