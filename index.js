@@ -1,5 +1,5 @@
 import * as cheerio from "cheerio";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer"; // not puppeteer-core
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import express from "express";
@@ -22,8 +22,7 @@ app.get("/scrape", async (_req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      executablePath: "/usr/bin/google-chrome", // or "/usr/bin/chromium-browser" if needed
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
@@ -41,7 +40,7 @@ app.get("/scrape", async (_req, res) => {
     ]);
 
     await page.goto("https://www.benchapp.com/schedule/list", {
-      waitUntil: "networkidle2",
+      waitUntil: "networkidle2"
     });
 
     const html = await page.content();
