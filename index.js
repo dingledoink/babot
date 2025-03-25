@@ -1,59 +1,66 @@
-const express = require('express');
-const fetch = require('node-fetch');
-const cheerio = require('cheerio');
+import express from 'express';
+import puppeteer from 'puppeteer-core';
+import * as cheerio from 'cheerio';
+import dotenv from 'dotenv';
+
+dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-const BASE_URL = 'https://www.benchapp.com/schedule/list';
+const BENCHAPP_EMAIL = process.env.BENCHAPP_EMAIL;
+const BENCHAPP_PASS = process.env.BENCHAPP_PASS;
 
-// Utility to fetch and parse game data
-async function fetchGameData() {
+app.get('/games', async (req, res) => {
   try {
-    const res = await fetch(BASE_URL);
-    const html = await res.text();
-    const $ = cheerio.load(html);
-
-    const games = [];
-
-    $('div.date').each((_, el) => {
-      const date = $(el).text().trim();
-      const next = $(el).nextAll('table').first();
-      next.find('a[href^="/schedule/game-"]').each((_, link) => {
-        const href = $(link).attr('href');
-        const title = $(link).text().trim();
-        const match = href.match(/game-(\d+)/);
-        if (match) {
-          games.push({
-            gameId: match[1],
-            title,
-            date
-          });
-        }
-      });
+    const browser = await puppeteer.launch({
+      headless: true,
+      executablePath: '/usr/bin/google-chrome', // For Railway or other environments
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
-    return games;
+    const page = await browser.newPage();
+    await page.goto('https://www.benchapp.com/login', { waitUntil: 'networkidle2' });
+
+    // Login
+    await page.type('input[name="email"]', BENCHAPP_EMAIL);
+    await page.type('input[name="password"]', BENCHAPP_PASS);
+    await Promise.all([
+      page.click('button[type="submit"]'),
+      page.waitForNavigation({ waitUntil: 'networkidle2' })
+    ]);
+
+    // Navigate to schedule list
+    await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'networkidle2' });
+    const html = await page.content();
+    await browser.close();
+
+    const $ = cheerio.load(html);
+    const gameData = [];
+
+    let currentDate = null;
+
+    $('div.date, td.mHide a[href^="/schedule/game-"]').each((_, el) => {
+      const tag = $(el).get(0).tagName;
+
+      if (tag === 'div') {
+        currentDate = $(el).text().trim();
+      } else if (tag === 'a') {
+        const href = $(el).attr('href');
+        const match = href.match(/\/schedule\/game-(\d+)/);
+        if (match && currentDate) {
+          gameData.push({
+            gameId: match[1],
+            date: currentDate
+          });
+        }
+      }
+    });
+
+    res.json({ gameData });
   } catch (err) {
-    console.error('Fetch error:', err);
-    return [];
-  }
-}
-
-// Endpoint to get all games
-app.get('/games', async (req, res) => {
-  const data = await fetchGameData();
-  res.json({ gameData: data });
-});
-
-// Endpoint to get a specific game by ID
-app.get('/game/:id', async (req, res) => {
-  const allGames = await fetchGameData();
-  const game = allGames.find(g => g.gameId === req.params.id);
-  if (game) {
-    res.json({ game });
-  } else {
-    res.status(404).json({ error: 'Game not found' });
+    console.error('Error scraping schedule:', err);
+    res.status(500).json({ error: err.message });
   }
 });
 
