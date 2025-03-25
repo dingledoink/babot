@@ -1,53 +1,59 @@
-import express from 'express';
-import fetch from 'node-fetch';
-import cheerio from 'cheerio';
+const express = require('express');
+const fetch = require('node-fetch');
+const cheerio = require('cheerio');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 const BASE_URL = 'https://www.benchapp.com/schedule/list';
 
-app.get('/games', async (req, res) => {
+// Utility to fetch and parse game data
+async function fetchGameData() {
   try {
-    const response = await fetch(BASE_URL);
-    const html = await response.text();
+    const res = await fetch(BASE_URL);
+    const html = await res.text();
     const $ = cheerio.load(html);
 
     const games = [];
-    let currentDate = '';
 
-    $('div.date, td.mHide a[href*="/schedule/game-"]').each((i, el) => {
-      if ($(el).hasClass('date')) {
-        currentDate = $(el).text().trim();
-      } else {
-        const href = $(el).attr('href');
-        const match = href.match(/\/schedule\/game-(\d+)/);
+    $('div.date').each((_, el) => {
+      const date = $(el).text().trim();
+      const next = $(el).nextAll('table').first();
+      next.find('a[href^="/schedule/game-"]').each((_, link) => {
+        const href = $(link).attr('href');
+        const title = $(link).text().trim();
+        const match = href.match(/game-(\d+)/);
         if (match) {
-          const gameId = match[1];
-          const team = $(el).text().trim();
-          games.push({ date: currentDate, team, gameId });
+          games.push({
+            gameId: match[1],
+            title,
+            date
+          });
         }
-      }
+      });
     });
 
-    res.json({ gameData: games });
+    return games;
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error('Fetch error:', err);
+    return [];
   }
+}
+
+// Endpoint to get all games
+app.get('/games', async (req, res) => {
+  const data = await fetchGameData();
+  res.json({ gameData: data });
 });
 
+// Endpoint to get a specific game by ID
 app.get('/game/:id', async (req, res) => {
-  const gameId = req.params.id;
-  const url = `https://www.benchapp.com/schedule/game-${gameId}`;
-
-  try {
-    const response = await fetch(url);
-    const html = await response.text();
-    const $ = cheerio.load(html);
-    const title = $('title').text().trim();
-    res.json({ gameId, title });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
+  const allGames = await fetchGameData();
+  const game = allGames.find(g => g.gameId === req.params.id);
+  if (game) {
+    res.json({ game });
+  } else {
+    res.status(404).json({ error: 'Game not found' });
   }
 });
 
