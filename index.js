@@ -1,75 +1,59 @@
 import express from "express";
-import * as cheerio from "cheerio";
-import fetch from "node-fetch";
 import puppeteer from "puppeteer-core";
-import path from "path";
-import { fileURLToPath } from "url";
+import cheerio from "cheerio";
 import dotenv from "dotenv";
+import fetch from "node-fetch";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+const app = express();
+const PORT = process.env.PORT || 8080;
 
-
-let gameData = [];
-
-app.get("/games", (req, res) => {
-  res.json({ games: gameData });
-});
-
-app.get("/game/:id", (req, res) => {
-  const game = gameData.find(g => g.gameId === req.params.id);
-  if (!game) return res.status(404).json({ error: "Not found" });
-  res.json(game);
-});
-
-app.get("/scrape", async (req, res) => {
+app.get("/games", async (req, res) => {
   try {
     const browser = await puppeteer.launch({
-      executablePath: CHROME_EXECUTABLE_PATH,
+      executablePath: "/usr/bin/google-chrome",
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: true,
+      headless: true
     });
 
     const page = await browser.newPage();
-    await page.goto("https://www.benchapp.com/login?redirect=%2Fschedule%2Flist", { waitUntil: "networkidle2" });
+    await page.goto("https://www.benchapp.com/schedule/list", {
+      waitUntil: "networkidle2",
+      timeout: 60000
+    });
 
-    await page.type('input[name="email"]', EMAIL);
-    await page.type('input[name="password"]', PASSWORD);
-    await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: "networkidle2" })
-    ]);
+    const content = await page.content();
+    await browser.close();
 
-    const html = await page.content();
-    const $ = cheerio.load(html);
+    const $ = cheerio.load(content);
+    const gameData = [];
 
-    const games = [];
-    let currentDate = "";
+    let currentDate = null;
 
-    $("div.date, td.mHide a[href*='/schedule/game-']").each((_, el) => {
-      const tag = $(el);
-      if (tag.hasClass("date")) {
-        currentDate = tag.text().trim();
+    $("div.date, td.mHide a").each((_, el) => {
+      const $el = $(el);
+      if ($el.hasClass("date")) {
+        currentDate = $el.text().trim();
       } else {
-        const href = tag.attr("href");
-        const match = href.match(/\/schedule\/game-(\d+)/);
+        const href = $el.attr("href");
+        const match = href && href.match(/\/schedule\/game-(\d+)/);
         if (match) {
-          const gameId = match[1];
-          games.push({ date: currentDate, gameId });
+          gameData.push({
+            date: currentDate,
+            gameId: match[1]
+          });
         }
       }
     });
 
-    gameData = games;
-    await browser.close();
-    res.json({ gameIds: games });
+    res.json({ games: gameData });
   } catch (error) {
+    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`BenchApp bot listening on port ${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
