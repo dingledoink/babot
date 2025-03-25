@@ -1,61 +1,66 @@
+// index.js
 import express from "express";
-import puppeteer from "puppeteer-core";
+import puppeteer from "puppeteer";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 dotenv.config();
 
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-
 const app = express();
-const port = process.env.PORT || 8080;
-
-app.get("/", (req, res) => {
-  res.send("BenchApp bot is running.");
-});
+const PORT = process.env.PORT || 8080;
 
 app.get("/games", async (req, res) => {
   try {
     const browser = await puppeteer.launch({
-      headless: "new",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome"
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"]
     });
 
     const page = await browser.newPage();
+    await page.goto("https://www.benchapp.com/schedule/list", {
+      waitUntil: "domcontentloaded",
+      timeout: 60000
+    });
 
-    // Go to login page
-    await page.goto("https://www.benchapp.com/login", { waitUntil: "networkidle0" });
-
-    // Type login info
-    await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL, { delay: 50 });
-    await page.type('input[name="password"]', process.env.BENCHAPP_PASS, { delay: 50 });
-
-    // Click login button and wait for redirect
+    // Log in
+    await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
+    await page.type('input[name="password"]', process.env.BENCHAPP_PASS);
     await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: "networkidle0" })
+      page.click("button[type=submit]"),
+      page.waitForNavigation({ waitUntil: "domcontentloaded" })
     ]);
 
-    // Now go to the schedule list page
-    await page.goto("https://www.benchapp.com/schedule/list", { waitUntil: "networkidle0" });
+    const content = await page.content();
+    const gameData = [];
 
-    // Grab page content
-    const html = await page.content();
+    const datesAndGames = await page.evaluate(() => {
+      const entries = [];
+      const dateEls = Array.from(document.querySelectorAll("div.date"));
+
+      dateEls.forEach((dateEl) => {
+        const dateText = dateEl.textContent.trim();
+        let sibling = dateEl.nextElementSibling;
+
+        while (sibling && !sibling.classList.contains("date")) {
+          const link = sibling.querySelector("a[href*='/schedule/game-']");
+          if (link) {
+            const match = link.href.match(/\/schedule\/game-(\d+)/);
+            if (match) {
+              entries.push({ date: dateText, gameId: match[1] });
+            }
+          }
+          sibling = sibling.nextElementSibling;
+        }
+      });
+      return entries;
+    });
 
     await browser.close();
-
-    // Return HTML so we can debug and verify it’s the real schedule
-    res.send(html);
-
+    res.json({ gameData: datesAndGames });
   } catch (err) {
-    console.error("ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
