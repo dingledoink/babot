@@ -1,7 +1,7 @@
 import puppeteer from 'puppeteer';
 import express from 'express';
 import dotenv from 'dotenv';
-import cheerio from 'cheerio';
+import * as cheerio from 'cheerio'; // ✅ FIXED import
 
 dotenv.config();
 const app = express();
@@ -11,7 +11,7 @@ app.get('/test', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox'] // Needed for Railway
+      args: ['--no-sandbox', '--disable-setuid-sandbox']
     });
 
     const page = await browser.newPage();
