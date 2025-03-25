@@ -1,69 +1,33 @@
+import puppeteer from 'puppeteer';
 import express from 'express';
-import puppeteer from 'puppeteer-core';
-import * as cheerio from 'cheerio';
 import dotenv from 'dotenv';
+import cheerio from 'cheerio';
 
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-const BENCHAPP_EMAIL = process.env.BENCHAPP_EMAIL;
-const BENCHAPP_PASS = process.env.BENCHAPP_PASS;
-
-app.get('/games', async (req, res) => {
+app.get('/test', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
-      headless: true,
-      executablePath: '/usr/bin/google-chrome', // For Railway or other environments
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: 'new',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'] // Needed for Railway
     });
 
     const page = await browser.newPage();
-    await page.goto('https://www.benchapp.com/login', { waitUntil: 'networkidle2' });
-
-    // Login
-    await page.type('input[name="email"]', BENCHAPP_EMAIL);
-    await page.type('input[name="password"]', BENCHAPP_PASS);
-    await Promise.all([
-      page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2' })
-    ]);
-
-    // Navigate to schedule list
-    await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'networkidle2' });
+    await page.goto('https://example.com');
     const html = await page.content();
-    await browser.close();
-
     const $ = cheerio.load(html);
-    const gameData = [];
+    const title = $('title').text();
 
-    let currentDate = null;
-
-    $('div.date, td.mHide a[href^="/schedule/game-"]').each((_, el) => {
-      const tag = $(el).get(0).tagName;
-
-      if (tag === 'div') {
-        currentDate = $(el).text().trim();
-      } else if (tag === 'a') {
-        const href = $(el).attr('href');
-        const match = href.match(/\/schedule\/game-(\d+)/);
-        if (match && currentDate) {
-          gameData.push({
-            gameId: match[1],
-            date: currentDate
-          });
-        }
-      }
-    });
-
-    res.json({ gameData });
-  } catch (err) {
-    console.error('Error scraping schedule:', err);
-    res.status(500).json({ error: err.message });
+    await browser.close();
+    res.json({ title });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ error: error.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`Server listening on port ${PORT}`);
 });
