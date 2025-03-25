@@ -1,59 +1,58 @@
 import express from "express";
-import puppeteer from "puppeteer-core";
+import fetch from "node-fetch";
 import * as cheerio from "cheerio";
 import dotenv from "dotenv";
-import fetch from "node-fetch";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-app.get("/games", async (req, res) => {
+// Serve static files (optional if using a frontend)
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, "public")));
+
+app.get("/scrape", async (req, res) => {
   try {
-    const browser = await puppeteer.launch({
-      executablePath: "/usr/bin/google-chrome",
-      args: ["--no-sandbox", "--disable-setuid-sandbox"],
-      headless: true
+    const response = await fetch("https://www.benchapp.com/schedule/list", {
+      headers: {
+        "User-Agent": "Mozilla/5.0"
+      }
     });
 
-    const page = await browser.newPage();
-    await page.goto("https://www.benchapp.com/schedule/list", {
-      waitUntil: "networkidle2",
-      timeout: 60000
-    });
+    const html = await response.text();
+    const $ = cheerio.load(html);
 
-    const content = await page.content();
-    await browser.close();
-
-    const $ = cheerio.load(content);
     const gameData = [];
-
     let currentDate = null;
 
     $("div.date, td.mHide a").each((_, el) => {
-      const $el = $(el);
-      if ($el.hasClass("date")) {
-        currentDate = $el.text().trim();
+      const tag = $(el);
+
+      if (tag.hasClass("date")) {
+        currentDate = tag.text().trim();
       } else {
-        const href = $el.attr("href");
-        const match = href && href.match(/\/schedule\/game-(\d+)/);
-        if (match) {
+        const href = tag.attr("href");
+        const match = href?.match(/\/schedule\/game-(\d+)/);
+        if (match && currentDate) {
           gameData.push({
-            date: currentDate,
-            gameId: match[1]
+            gameId: match[1],
+            date: currentDate
           });
         }
       }
     });
 
-    res.json({ games: gameData });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    res.json({ gameData });
+  } catch (err) {
+    console.error("Error during scraping:", err);
+    res.status(500).json({ error: "Scraping failed" });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on http://localhost:${PORT}`);
 });
