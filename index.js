@@ -1,5 +1,5 @@
+import * as cheerio from "cheerio";
 import puppeteer from "puppeteer-core";
-import cheerio from "cheerio";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 import express from "express";
@@ -22,7 +22,7 @@ app.get("/scrape", async (_req, res) => {
   try {
     const browser = await puppeteer.launch({
       headless: true,
-      executablePath: "/usr/bin/google-chrome", // change to your Railway Chrome path
+      executablePath: "/usr/bin/google-chrome", // or "/usr/bin/chromium-browser" if needed
       args: ["--no-sandbox", "--disable-setuid-sandbox"],
     });
 
