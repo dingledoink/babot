@@ -13,3 +13,4 @@
     "puppeteer-core": "^22.8.2"
   }
 }
+npm install dotenv
