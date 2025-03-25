@@ -1,6 +1,6 @@
 import express from "express";
 import puppeteer from "puppeteer-core";
-import cheerio from "cheerio";
+import * as cheerio from "cheerio";
 import dotenv from "dotenv";
 import fetch from "node-fetch";
 
