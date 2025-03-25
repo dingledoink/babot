@@ -1,49 +1,53 @@
 import express from "express";
-import fetch from "node-fetch";
-import cheerio from "cheerio";
+import axios from "axios";
+import { JSDOM } from "jsdom";
 import dotenv from "dotenv";
 
 dotenv.config();
-
 const app = express();
 const PORT = process.env.PORT || 8080;
 
 app.get("/games", async (req, res) => {
   try {
-    const response = await fetch("https://www.benchapp.com/schedule/list", {
+    const { data: html } = await axios.get("https://www.benchapp.com/schedule/list", {
       headers: {
         "User-Agent": "Mozilla/5.0"
       }
     });
 
-    const html = await response.text();
-    const $ = cheerio.load(html);
+    const dom = new JSDOM(html);
+    const document = dom.window.document;
+
+    const dateElems = [...document.querySelectorAll("div.date")];
     const gameData = [];
 
-    const dates = $("div.date");
+    dateElems.forEach((dateElem) => {
+      const date = dateElem.textContent.trim();
+      let next = dateElem.nextElementSibling;
 
-    dates.each((i, dateElem) => {
-      const date = $(dateElem).text().trim();
-      const anchor = $(dateElem).nextAll('a[href^="/schedule/game-"]').first();
-      const href = anchor.attr("href");
-
-      if (href) {
-        const match = href.match(/\/schedule\/game-(\d+)/);
-        if (match) {
-          const gameId = match[1];
-          gameData.push({ date, gameId });
+      while (next) {
+        if (next.tagName === "A" && next.href.includes("/schedule/game-")) {
+          const match = next.href.match(/\/schedule\/game-(\d+)/);
+          if (match) {
+            gameData.push({
+              date,
+              gameId: match[1]
+            });
+            break;
+          }
         }
+        next = next.nextElementSibling;
       }
     });
 
-    console.log("Scraped game data:", gameData);
+    console.log("Games scraped:", gameData);
     res.json({ gameData });
   } catch (err) {
-    console.error("Error scraping:", err);
+    console.error("Error during scrape:", err);
     res.status(500).json({ error: err.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server is running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
