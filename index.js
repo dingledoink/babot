@@ -1,53 +1,61 @@
 import express from "express";
-import axios from "axios";
-import { JSDOM } from "jsdom";
+import puppeteer from "puppeteer-core";
 import dotenv from "dotenv";
+import path from "path";
+import { fileURLToPath } from "url";
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 const app = express();
-const PORT = process.env.PORT || 8080;
+const port = process.env.PORT || 8080;
+
+app.get("/", (req, res) => {
+  res.send("BenchApp bot is running.");
+});
 
 app.get("/games", async (req, res) => {
   try {
-    const { data: html } = await axios.get("https://www.benchapp.com/schedule/list", {
-      headers: {
-        "User-Agent": "Mozilla/5.0"
-      }
+    const browser = await puppeteer.launch({
+      headless: "new",
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+      executablePath: process.env.CHROME_PATH || "/usr/bin/google-chrome"
     });
 
-    const dom = new JSDOM(html);
-    const document = dom.window.document;
+    const page = await browser.newPage();
 
-    const dateElems = [...document.querySelectorAll("div.date")];
-    const gameData = [];
+    // Go to login page
+    await page.goto("https://www.benchapp.com/login", { waitUntil: "networkidle0" });
 
-    dateElems.forEach((dateElem) => {
-      const date = dateElem.textContent.trim();
-      let next = dateElem.nextElementSibling;
+    // Type login info
+    await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL, { delay: 50 });
+    await page.type('input[name="password"]', process.env.BENCHAPP_PASS, { delay: 50 });
 
-      while (next) {
-        if (next.tagName === "A" && next.href.includes("/schedule/game-")) {
-          const match = next.href.match(/\/schedule\/game-(\d+)/);
-          if (match) {
-            gameData.push({
-              date,
-              gameId: match[1]
-            });
-            break;
-          }
-        }
-        next = next.nextElementSibling;
-      }
-    });
+    // Click login button and wait for redirect
+    await Promise.all([
+      page.click('button[type="submit"]'),
+      page.waitForNavigation({ waitUntil: "networkidle0" })
+    ]);
 
-    console.log("Games scraped:", gameData);
-    res.json({ gameData });
+    // Now go to the schedule list page
+    await page.goto("https://www.benchapp.com/schedule/list", { waitUntil: "networkidle0" });
+
+    // Grab page content
+    const html = await page.content();
+
+    await browser.close();
+
+    // Return HTML so we can debug and verify it’s the real schedule
+    res.send(html);
+
   } catch (err) {
-    console.error("Error during scrape:", err);
+    console.error("ERROR:", err.message);
     res.status(500).json({ error: err.message });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+app.listen(port, () => {
+  console.log(`Server running on http://localhost:${port}`);
 });
