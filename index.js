@@ -1,73 +1,59 @@
 import express from 'express';
-import puppeteer from 'puppeteer';
-import dotenv from 'dotenv';
+import puppeteer from 'puppeteer-core';
 import cheerio from 'cheerio';
+import dotenv from 'dotenv';
+import fetch from 'node-fetch';
 
 dotenv.config();
 
 const app = express();
-const port = process.env.PORT || 8080;
+const PORT = process.env.PORT || 8080;
 
-app.get('/', (req, res) => {
-  res.send('BenchApp Scraper is live.');
-});
-
-app.get('/debug', async (req, res) => {
-  res.json({ message: 'Debug OK' });
-});
+// Utility to delay actions
+const delay = (ms) => new Promise((res) => setTimeout(res, ms));
 
 app.get('/games', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
-      headless: true,
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      headless: 'new',
+      executablePath: '/usr/bin/google-chrome',
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
     });
 
     const page = await browser.newPage();
-    await page.goto('https://www.benchapp.com/login?redirect=%2Fschedule%2Flist', {
-      waitUntil: 'networkidle2',
-      timeout: 0
-    });
 
-    await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
-    await page.type('input[name="password"]', process.env.BENCHAPP_PASS);
+    // Go to login page
+    await page.goto('https://www.benchapp.com/login', { waitUntil: 'networkidle2' });
+
+    // Fill in login form
+    await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL, { delay: 30 });
+    await page.type('input[name="password"]', process.env.BENCHAPP_PASS, { delay: 30 });
+
     await Promise.all([
       page.click('button[type="submit"]'),
-      page.waitForNavigation({ waitUntil: 'networkidle2', timeout: 0 })
+      page.waitForNavigation({ waitUntil: 'networkidle2' }),
     ]);
 
-    await page.goto('https://www.benchapp.com/schedule/list', {
-      waitUntil: 'networkidle2',
-      timeout: 0
-    });
+    // Navigate to the schedule list
+    await page.goto('https://www.benchapp.com/schedule/list', { waitUntil: 'networkidle2' });
 
     const html = await page.content();
-    await browser.close();
-
     const $ = cheerio.load(html);
+
     const gameData = [];
 
-    let currentDate = '';
-
-    $('.date, .mHide a').each((_, el) => {
-      const $el = $(el);
-
-      if ($el.hasClass('date')) {
-        currentDate = $el.text().trim();
-      }
-
-      if ($el.attr('href') && $el.attr('href').includes('/schedule/game-')) {
-        const href = $el.attr('href');
-        const match = href.match(/\/schedule\/game-(\d+)/);
-        if (match) {
-          gameData.push({
-            date: currentDate,
-            gameId: match[1]
-          });
+    $('div.date').each((i, elem) => {
+      const date = $(elem).text().trim();
+      const gameLink = $(elem).next().find('a[href^="/schedule/game-"]').attr('href');
+      if (gameLink) {
+        const gameId = gameLink.match(/game-(\d+)/)?.[1];
+        if (gameId) {
+          gameData.push({ date, gameId });
         }
       }
     });
 
+    await browser.close();
     res.json({ gameData });
   } catch (error) {
     console.error(error);
@@ -75,6 +61,10 @@ app.get('/games', async (req, res) => {
   }
 });
 
-app.listen(port, () => {
-  console.log(`Server running on port ${port}`);
+app.get('/', (req, res) => {
+  res.send('BenchApp scraper running.');
+});
+
+app.listen(PORT, () => {
+  console.log(`Server running on port ${PORT}`);
 });
