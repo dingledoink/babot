@@ -1,21 +1,14 @@
 import express from "express";
 import fetch from "node-fetch";
-import * as cheerio from "cheerio";
+import cheerio from "cheerio";
 import dotenv from "dotenv";
-import path from "path";
-import { fileURLToPath } from "url";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 
-// Serve static files (optional if using a frontend)
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
-app.use(express.static(path.join(__dirname, "public")));
-
-app.get("/scrape", async (req, res) => {
+app.get("/games", async (req, res) => {
   try {
     const response = await fetch("https://www.benchapp.com/schedule/list", {
       headers: {
@@ -25,34 +18,32 @@ app.get("/scrape", async (req, res) => {
 
     const html = await response.text();
     const $ = cheerio.load(html);
-
     const gameData = [];
-    let currentDate = null;
 
-    $("div.date, td.mHide a").each((_, el) => {
-      const tag = $(el);
+    const dates = $("div.date");
 
-      if (tag.hasClass("date")) {
-        currentDate = tag.text().trim();
-      } else {
-        const href = tag.attr("href");
-        const match = href?.match(/\/schedule\/game-(\d+)/);
-        if (match && currentDate) {
-          gameData.push({
-            gameId: match[1],
-            date: currentDate
-          });
+    dates.each((i, dateElem) => {
+      const date = $(dateElem).text().trim();
+      const anchor = $(dateElem).nextAll('a[href^="/schedule/game-"]').first();
+      const href = anchor.attr("href");
+
+      if (href) {
+        const match = href.match(/\/schedule\/game-(\d+)/);
+        if (match) {
+          const gameId = match[1];
+          gameData.push({ date, gameId });
         }
       }
     });
 
+    console.log("Scraped game data:", gameData);
     res.json({ gameData });
   } catch (err) {
-    console.error("Error during scraping:", err);
-    res.status(500).json({ error: "Scraping failed" });
+    console.error("Error scraping:", err);
+    res.status(500).json({ error: err.message });
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
