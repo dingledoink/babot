@@ -2,11 +2,12 @@ import puppeteer from 'puppeteer';
 import express from 'express';
 import dotenv from 'dotenv';
 import * as cheerio from 'cheerio';
-import fs from 'fs';
 
 dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 8080;
+
+let lastHTML = ''; // save last raw HTML here for debugging
 
 app.get('/games', async (req, res) => {
   try {
@@ -29,31 +30,22 @@ app.get('/games', async (req, res) => {
       page.waitForNavigation({ waitUntil: 'networkidle2' })
     ]);
 
-    // 2. VISIT SCHEDULE
+    // 2. GO TO SCHEDULE
     await page.goto('https://www.benchapp.com/schedule/list', {
       waitUntil: 'networkidle2'
     });
 
     const html = await page.content();
-
-    // Save raw HTML so we can debug
-    fs.writeFileSync('/app/schedule_debug.html', html);
+    lastHTML = html; // store it so we can view via /debug
 
     const $ = cheerio.load(html);
     const gameData = [];
 
-    const dateElements = $('div.date');
-    console.log(`Found ${dateElements.length} date elements`);
-
-    dateElements.each((i, el) => {
+    $('div.date').each((i, el) => {
       const dateText = $(el).text().trim();
-
-      // Try to locate a nearby game link
-      const nextLink = $(el).nextAll().find('a[href*="/schedule/game-"]').first();
-      const href = nextLink.attr('href');
-
+      const gameLink = $(el).nextAll('a[href*="/schedule/game-"]').first();
+      const href = gameLink.attr('href');
       if (href) {
-        console.log(`Found game link after ${dateText}: ${href}`);
         const match = href.match(/\/schedule\/game-(\d+)/);
         if (match) {
           gameData.push({
@@ -61,24 +53,26 @@ app.get('/games', async (req, res) => {
             gameId: match[1],
           });
         }
-      } else {
-        console.log(`⚠️ No game link found after ${dateText}`);
       }
     });
 
     await browser.close();
     res.json({ gameData });
-
   } catch (err) {
     console.error('Scrape failed:', err);
     res.status(500).json({ error: err.message });
   }
 });
 
+app.get('/debug', (req, res) => {
+  res.set('Content-Type', 'text/html');
+  res.send(lastHTML || '<p>No HTML has been scraped yet.</p>');
+});
+
 app.get('/', (req, res) => {
-  res.send('BenchApp Bot is running.');
+  res.send('BenchApp bot is live.');
 });
 
 app.listen(PORT, () => {
-  console.log(`Server listening on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
