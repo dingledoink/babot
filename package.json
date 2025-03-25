@@ -1,15 +1,17 @@
 {
   "name": "benchapp-bot",
-  "type": "module",
   "version": "1.0.0",
+  "type": "module",
   "main": "index.js",
   "scripts": {
-    "start": "node index.js"
+    "start": "node index.js",
+    "postinstall": "echo Skipping puppeteer Chromium download"
   },
   "dependencies": {
     "cheerio": "^1.0.0-rc.12",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
-    "puppeteer": "^21.11.0"
+    "puppeteer-core": "^22.8.2",
+    "node-fetch": "^3.3.2"
   }
 }
