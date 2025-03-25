@@ -16,12 +16,11 @@ app.get('/games', async (req, res) => {
 
     const page = await browser.newPage();
 
-    // Navigate to login page
+    // Log in
     await page.goto('https://www.benchapp.com/login?redirect=%2Fschedule%2Flist', {
       waitUntil: 'networkidle2'
     });
 
-    // Fill in login form
     await page.type('input[name="email"]', process.env.BENCHAPP_EMAIL);
     await page.type('input[name="password"]', process.env.BENCHAPP_PASS);
     await Promise.all([
@@ -29,7 +28,7 @@ app.get('/games', async (req, res) => {
       page.waitForNavigation({ waitUntil: 'networkidle2' })
     ]);
 
-    // Go to schedule page
+    // Go to schedule list
     await page.goto('https://www.benchapp.com/schedule/list', {
       waitUntil: 'networkidle2'
     });
@@ -38,13 +37,16 @@ app.get('/games', async (req, res) => {
     const $ = cheerio.load(html);
     const gameData = [];
 
-    const dateEls = $('div.date');
-    dateEls.each((i, el) => {
+    const dateElements = $('div.date');
+    dateElements.each((i, el) => {
       const dateText = $(el).text().trim();
-      const gameLink = $(el).next().find('a[href*="/schedule/game-"]').attr('href');
 
-      if (gameLink) {
-        const match = gameLink.match(/\/schedule\/game-(\d+)/);
+      // Look ahead in the DOM for the next <a href="/schedule/game-xxxxx">
+      const nextGameLink = $(el).nextAll().find('a[href*="/schedule/game-"]').first();
+      const href = nextGameLink.attr('href');
+
+      if (href) {
+        const match = href.match(/\/schedule\/game-(\d+)/);
         if (match) {
           gameData.push({
             date: dateText,
